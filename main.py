@@ -209,13 +209,14 @@ class Ghost:
         self.speed = 2.4
         self.color = color
         self.radius = 8
-        self.node_to_dir_dict = {(0, -1): "up", (0, 1): "down", (-1, 0): "left", (1, 0): "right"}
         self.calculate_path = True
+        self.path = []
+        self.teleport_timer = 0
 
     def draw(self):
         pygame.draw.rect(screen, self.color, (self.x, self.y, self.radius * 2, self.radius * 2))
 
-    def BFS(self, start, end):
+    def BFS(self, start, end, grid):
         queue = [[start]]
         visited = set()
         while queue:
@@ -224,19 +225,37 @@ class Ghost:
             if node == end:
                 return path
             elif node not in visited:
-                for adjacent in [(0, -1), (0, 1), (-1, 0), (1, 0)]:
-                    new_path = list(path)
-                    new_path.append((node[0] + adjacent[0], node[1] + adjacent[1]))
-                    queue.append(new_path)
                 visited.add(node)
+                for adjacent in [(0, -1), (0, 1), (-1, 0), (1, 0)]:
+                    new_x = node[0] + adjacent[0]
+                    new_y = node[1] + adjacent[1]
+                    if (0 <= new_x < len(grid[0])) and (0 <= new_y < len(grid)) and grid[new_y][new_x] != "#":
+                        new_path = list(path)
+                        new_path.append((new_x, new_y))  # Fixed the order here
+                        queue.append(new_path)  # Enqueue the new path
+        # If no path is found
+        return None
 
+
+
+    def move(self):
+        # for now we're just gonna teleport the ghost to the next node in the path every second cause I'm lazy
+        if self.path and self.teleport_timer == 0:
+            next_node = self.path.pop(0)
+            self.x = next_node[0] * 20
+            self.y = next_node[1] * 20
+    
     def update(self):
         if self.calculate_path:
             pacman_array = (int(pacman.x / 20), int(pacman.y / 20))
             ghost_array = (int(self.x / 20), int(self.y / 20))
-            path = self.BFS(ghost_array, pacman_array)
+            self.path = self.BFS(ghost_array, pacman_array, grid.grid)
             self.calculate_path = False
-            print(path)
+            print(self.path)
+        self.draw()
+        self.move()
+        
+
 
 pacman = Pacman()
 
@@ -257,6 +276,9 @@ while running:
     pacman.update()
     for ghost in ghosts:
         ghost.update()
+        ghost.teleport_timer += 1
+        if ghost.teleport_timer == 30:
+            ghost.teleport_timer = 0
     grid.draw()
 
     for event in pygame.event.get():
