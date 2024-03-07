@@ -42,7 +42,39 @@ class Grid:
     "#..........................#",
     "############################"
 ]
-
+    
+        self.nodemap = [
+    "############################",
+    "#            ##            #",
+    "# #### ##### ## ##### #### #",
+    "# #### ##### ## ##### #### #",
+    "#                          #",
+    "# #### ## ######## ## #### #",
+    "# #### ## ######## ## #### #",
+    "#      ##    ##    ##      #",
+    "###### ##### ## ##### ######",
+    "     # ##### ## ##### #     ",
+    "     # ##          ## #     ",
+    "     # ## ###  ### ## #     ",
+    "###### ## #      # ## ######",
+    "          #      #            ",
+    "###### ## #      # ## ######",
+    "     # ## ######## ## #     ",
+    "     # ##          ## #     ",
+    "###### ## ######## ## ######",
+    "###### ## ######## ## ######",
+    "#            ##            #",
+    "# #### ##### ## ##### #### #",
+    "# #### ##### ## ##### #### #",
+    "#   ##                ##   #",
+    "### ## ## ######## ## ## ###",
+    "### ## ## ######## ## ## ###",
+    "#      ##    ##    ##      #",
+    "# ########## ## ########## #",
+    "# ########## ## ########## #",
+    "#                          #",
+    "############################"
+]
     def draw(self):
         for y in range(len(self.grid)):
             for x in range(len(self.grid[y])):
@@ -131,7 +163,7 @@ class Pacman:
             else:
                 self.moving = True
         if self.direction == "down":
-            if grid.grid[int((self.y + self.radius) / 20)][int(self.x / 20)] == "#":
+            if grid.grid[int((self.y + self.radius) / 20)][int(self.x / 20)] == "#" or grid.grid[int((self.y + self.radius) / 20)][int(self.x / 20)] == "-":
                 self.y -= self.speed
                 self.moving = False
             else:
@@ -170,37 +202,48 @@ class Pacman:
         self.animation()
 
 class Ghost:
-    def __init__(self, color):
-        self.x = 50
-        self.y = 50
-        self.direction = "right"
+    def __init__(self, color, x, y, starting_dir):
+        self.x = x
+        self.y = y
+        self.direction = starting_dir
         self.speed = 2.4
         self.color = color
-        self.radius = 20
+        self.radius = 8
+        self.node_to_dir_dict = {(0, -1): "up", (0, 1): "down", (-1, 0): "left", (1, 0): "right"}
+        self.calculate_path = True
 
     def draw(self):
         pygame.draw.rect(screen, self.color, (self.x, self.y, self.radius * 2, self.radius * 2))
 
-    def move(self):
-        if self.direction == "right":
-            self.x += self.speed
-        if self.direction == "left":
-            self.x -= self.speed
-        if self.direction == "up":
-            self.y -= self.speed
-        if self.direction == "down":
-            self.y += self.speed
+    def BFS(self, start, end):
+        queue = [[start]]
+        visited = set()
+        while queue:
+            path = queue.pop(0)
+            node = path[-1]
+            if node == end:
+                return path
+            elif node not in visited:
+                for adjacent in [(0, -1), (0, 1), (-1, 0), (1, 0)]:
+                    new_path = list(path)
+                    new_path.append((node[0] + adjacent[0], node[1] + adjacent[1]))
+                    queue.append(new_path)
+                visited.add(node)
 
     def update(self):
-        self.draw()
-        self.move()
+        if self.calculate_path:
+            pacman_array = (int(pacman.x / 20), int(pacman.y / 20))
+            ghost_array = (int(self.x / 20), int(self.y / 20))
+            path = self.BFS(ghost_array, pacman_array)
+            self.calculate_path = False
+            print(path)
 
 pacman = Pacman()
 
-blinky = Ghost((255, 0, 0))
-pinky = Ghost((255, 184, 255))
-inky = Ghost((0, 255, 255))
-clyde = Ghost((255, 184, 255))
+blinky = Ghost((255, 0, 0), (11*20)+4, (12*20)+4, "right")
+pinky = Ghost((255, 184, 255), (16*20)+4, (12*20)+4, "left")
+inky = Ghost((0, 255, 255), (11*20)+4, (14*20)+4, "right")
+clyde = Ghost((255, 184, 82), (16*20)+4, (14*20)+4, "left")
 
 ghosts = [blinky, pinky, inky, clyde]
 
@@ -210,7 +253,7 @@ running = True
 
 while running:
     screen.fill((0, 0, 0))
-    
+
     pacman.update()
     for ghost in ghosts:
         ghost.update()
@@ -233,7 +276,7 @@ while running:
                 pacman.direction = "up"
                 pacman.x = current_array[0] * 20 + 10
                 pacman.y = current_array[1] * 20 + 10
-            if event.key == pygame.K_DOWN and grid.grid[int((pacman.y + 20) / 20)][int(pacman.x / 20)] != "#":
+            if event.key == pygame.K_DOWN and grid.grid[int((pacman.y + 20) / 20)][int(pacman.x / 20)] != "#" and grid.grid[int((pacman.y + 20) / 20)][int(pacman.x / 20)] != "-":
                 pacman.direction = "down"
                 pacman.x = current_array[0] * 20 + 10
                 pacman.y = current_array[1] * 20 + 10
