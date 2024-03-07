@@ -221,19 +221,19 @@ while running:
             running = False
         if event.type == pygame.KEYDOWN:
             current_array = (int(pacman.x / 20), int(pacman.y / 20))
-            if event.key == pygame.K_LEFT:
+            if event.key == pygame.K_LEFT and grid.grid[int(pacman.y / 20)][int((pacman.x - 20) / 20)] != "#":
                 pacman.direction = "left"
                 pacman.x = current_array[0] * 20 + 10
                 pacman.y = current_array[1] * 20 + 10
-            if event.key == pygame.K_RIGHT:
+            if event.key == pygame.K_RIGHT and grid.grid[int(pacman.y / 20)][int((pacman.x + 20) / 20)] != "#":
                 pacman.direction = "right"
                 pacman.x = current_array[0] * 20 + 10
                 pacman.y = current_array[1] * 20 + 10
-            if event.key == pygame.K_UP:
+            if event.key == pygame.K_UP and grid.grid[int((pacman.y - 20) / 20)][int((pacman.x) / 20)] != "#":
                 pacman.direction = "up"
                 pacman.x = current_array[0] * 20 + 10
                 pacman.y = current_array[1] * 20 + 10
-            if event.key == pygame.K_DOWN:
+            if event.key == pygame.K_DOWN and grid.grid[int((pacman.y + 20) / 20)][int(pacman.x / 20)] != "#":
                 pacman.direction = "down"
                 pacman.x = current_array[0] * 20 + 10
                 pacman.y = current_array[1] * 20 + 10
