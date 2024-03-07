@@ -1,6 +1,6 @@
 # pac-man
 
-import pygame
+import pygame, math
 
 pygame.init()
 clock = pygame.time.Clock()
@@ -13,7 +13,7 @@ class Grid:
         self.grid = [
     "############################",
     "#............##............#",
-    "#.####.#####.##.#####.####.#",
+    "#*####.#####.##.#####.####*#",
     "#.####.#####.##.#####.####.#",
     "#..........................#",
     "#.####.##.########.##.####.#",
@@ -33,7 +33,7 @@ class Grid:
     "#............##............#",
     "#.####.#####.##.#####.####.#",
     "#.####.#####.##.#####.####.#",
-    "#...##................##...#",
+    "#*..##................##..*#",
     "###.##.##.########.##.##.###",
     "###.##.##.########.##.##.###",
     "#......##....##....##......#",
@@ -46,10 +46,31 @@ class Grid:
     def draw(self):
         for y in range(len(self.grid)):
             for x in range(len(self.grid[y])):
+                top_left = (x * 20, y * 20)
+                top_right = (x * 20 + 20, y * 20)
+                bottom_left = (x * 20, y * 20 + 20)
+                bottom_right = (x * 20 + 20, y * 20 + 20) 
                 if self.grid[y][x] == "#":
-                    pygame.draw.rect(screen, (0, 0, 255), (x * 20, y * 20, 20, 20))
+                    for i in range(-1, 2):
+                        for j in range(-1, 2):
+                            if (i == 0 and j == 0) or (abs(i) == abs(j)):
+                                continue
+                            try:
+                                if self.grid[y + i][x + j] != "#":
+                                    if i == -1:
+                                        pygame.draw.line(screen, (0,0,255), top_left, top_right, 2)
+                                    if i == 1:
+                                        pygame.draw.line(screen, (0,0,255), bottom_left, bottom_right, 2)
+                                    if j == -1:
+                                        pygame.draw.line(screen, (0,0,255), top_left, bottom_left, 2)
+                                    if j == 1:
+                                        pygame.draw.line(screen, (0,0,255), top_right, bottom_right, 2)
+                            except IndexError:
+                                pass
                 if self.grid[y][x] == ".":
-                    pygame.draw.circle(screen, (255, 255, 0), (x * 20 + 10, y * 20 + 10), 2)
+                    pygame.draw.circle(screen, (255, 255, 255), (x * 20 + 10, y * 20 + 10), 2)
+                if self.grid[y][x] == "*":
+                    pygame.draw.circle(screen, (255, 255, 255), (x * 20 + 10, y * 20 + 10), 5)
 
 class Pacman:
     def __init__(self):
@@ -59,9 +80,26 @@ class Pacman:
         self.color = (255, 255, 0)
         self.direction = "right"
         self.speed = 2.5
+        self.direction_to_angle_dict = {"right": 0, "down": 90, "left": 180, "up": 270}
+        self.animation_frame = 0
+        self.animate_backwards = False
+        self.moving = True
 
     def draw(self):
         pygame.draw.circle(screen, self.color, (self.x, self.y), self.radius)
+        start_angle = math.radians((-0 - self.animation_frame) + self.direction_to_angle_dict[self.direction])
+        end_angle = math.radians((0 + self.animation_frame) + self.direction_to_angle_dict[self.direction])
+        center = (self.x, self.y)
+        vertices = [center]
+        num_vertices = 30 
+        angle_step = (end_angle - start_angle) / num_vertices
+        for i in range(num_vertices + 1):
+            angle = start_angle + i * angle_step
+            x = center[0] + self.radius * math.cos(angle)
+            y = center[1] + self.radius * math.sin(angle)
+            vertices.append((x, y))
+
+        pygame.draw.polygon(screen, (0, 0, 0), vertices)
 
     def move(self):
         if self.direction == "right":
@@ -83,15 +121,53 @@ class Pacman:
         if self.direction == "right":
             if current_array[int((self.x + self.radius) / 20)] == "#":
                 self.x -= self.speed
+                self.moving = False
+            else:
+                self.moving = True
         if self.direction == "left":
             if current_array[int((self.x - self.radius) / 20)] == "#":
                 self.x += self.speed
+                self.moving = False
+            else:
+                self.moving = True
         if self.direction == "down":
             if grid.grid[int((self.y + self.radius) / 20)][int(self.x / 20)] == "#":
                 self.y -= self.speed
+                self.moving = False
+            else:
+                self.moving = True
         if self.direction == "up":
             if grid.grid[int((self.y - self.radius) / 20)][int(self.x / 20)] == "#":
                 self.y += self.speed
+                self.moving = False
+            else:
+                self.moving = True
+
+    def eat_check(self):
+        current_array = list(grid.grid[int(self.y / 20)])  # Convert string to list
+        if current_array[int(self.x / 20)] == ".":
+            current_array[int(self.x / 20)] = " "
+        if current_array[int(self.x / 20)] == "*":
+            current_array[int(self.x / 20)] = " "
+        grid.grid[int(self.y / 20)] = "".join(current_array)  # Convert list back to string
+
+    def animation(self):
+        if self.moving:
+            if self.animation_frame == 45:
+                self.animate_backwards = True
+            if self.animation_frame == 0:
+                self.animate_backwards = False
+            if self.animate_backwards:
+                self.animation_frame -= 5
+            else:
+                self.animation_frame += 5
+
+    def update(self):
+        self.draw()
+        self.move()
+        self.clamping()
+        self.eat_check()
+        self.animation()
 
 class Ghost:
     def __init__(self, color):
@@ -115,12 +191,18 @@ class Ghost:
         if self.direction == "down":
             self.y += self.speed
 
+    def update(self):
+        self.draw()
+        self.move()
+
 pacman = Pacman()
 
 blinky = Ghost((255, 0, 0))
 pinky = Ghost((255, 184, 255))
 inky = Ghost((0, 255, 255))
 clyde = Ghost((255, 184, 255))
+
+ghosts = [blinky, pinky, inky, clyde]
 
 grid = Grid()
 
@@ -129,19 +211,10 @@ running = True
 while running:
     screen.fill((0, 0, 0))
     
-    pacman.draw()
-    pacman.move()
-    blinky.draw()
-    blinky.move()
-    pinky.draw()
-    pinky.move()
-    inky.draw()
-    inky.move()
-    clyde.draw()
-    clyde.move()
+    pacman.update()
+    for ghost in ghosts:
+        ghost.update()
     grid.draw()
-
-    pacman.clamping()
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
