@@ -1,6 +1,6 @@
 # pac-man
 
-import pygame, math, random, pacmanclass, gridclass, ghostclass, copy
+import pygame, math, random, copy, pacmanclass, gridclass, ghostclass, fruitsclass
 
 pygame.init()
 clock = pygame.time.Clock()
@@ -9,7 +9,9 @@ size = [560, 640]
 screen = pygame.display.set_mode(size)
 pygame.display.set_caption("pacman!!!!")
 
-level = 1
+spawn_fruit = True
+
+level = 0
 
 pacman = pacmanclass.Pacman()
 
@@ -20,11 +22,23 @@ clyde = ghostclass.Ghost((255, 184, 82), (16*20)+4, (14*20)+4, "left")
 
 ghosts = [blinky, pinky, inky, clyde]
 
+fruit_order = [pygame.image.load("sprites/PM_Cherry.png"), pygame.image.load("sprites/PM_Strawberry.png"), pygame.image.load("sprites/PM_Orange.png"), pygame.image.load("sprites/PM_Apple.png"), pygame.image.load("sprites/PM_Melon.png"), pygame.image.load("sprites/PM_Galaxian.png"), pygame.image.load("sprites/PM_Bell.png"), pygame.image.load("sprites/PM_Key.png")]
+fruit_points = [100, 300, 500, 700, 1000, 2000, 3000, 5000]
+fruits = []
+
 grid = gridclass.Grid()
 
 def update_all():
-    global level
+    global level, spawn_fruit
     dots_left = grid.dots_left()
+
+    if (dots_left == 170 or dots_left == 70) and spawn_fruit:
+        if level <= 7:
+            fruits.append(fruitsclass.Fruit(fruit_order[level % 8], fruit_points[level % 8]))
+        spawn_fruit = False
+    else:
+        spawn_fruit = True
+
     if dots_left == 0:
         level += 1
         pacman.x = 280
@@ -43,6 +57,10 @@ def update_all():
 
     grid.draw(screen)
 
+    for fruit in fruits:
+        fruit.draw(screen, len(fruits))
+        fruit.eat_check(pacman)
+
     for ghost in ghosts:
         ghost.behaviours(pacman, grid)
         ghost.move()
@@ -54,6 +72,8 @@ while running:
     screen.fill((0, 0, 0))
 
     update_all()
+
+    print(pygame.mouse.get_pos())
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
